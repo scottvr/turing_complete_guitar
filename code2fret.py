@@ -1,119 +1,129 @@
 import ast
 import inspect
 import textwrap
+from typing import List, Tuple, Dict, Any, Optional
 
-class GuitarTranslator:
+class GuitarCodeTranslator:
     def __init__(self):
-        self.basic_chords = ['Em', 'G', 'C', 'D', 'Am']
-        self.special_progressions = {
-            'if': ['Em', 'G'],
-            'else': ['Am', 'C'],
-            'while': ['D', 'Em', 'D'],
-            'return': ['G', 'Em', 'C'],
-            'assignment': ['C', 'G'],
+        # Basic power chord progressions for common operations
+        self.chord_map = {
+            'READ': 'E5',
+            'WRITE': 'A5',
+            'COMPUTE': 'D5',
+            'BRANCH': 'G5',
+            'LOOP': 'C5'
         }
-        self.operator_maps = {
-            'Add': ['G', 'C'],
-            'Sub': ['Em', 'Am'],
-            'Mult': ['D', 'G'],
-            'Div': ['Am', 'Em'],
-            'Eq': ['C', 'C'],
+        
+        # Operation patterns for different AST nodes
+        self.operation_patterns = {
+            ast.Add: ['E5', 'A5'],
+            ast.Sub: ['A5', 'D5'],
+            ast.Mult: ['D5', 'G5'],
+            ast.Div: ['G5', 'C5'],
+            ast.Mod: ['C5', 'E5'],
+            ast.Compare: ['E5', 'D5', 'A5']
         }
-    
-    def _value_to_chord(self, value):
-        if isinstance(value, bool):
-            return 'Em' if value else 'Am'
-        if isinstance(value, int):
-            return self.basic_chords[value % len(self.basic_chords)]
-        if isinstance(value, str):
-            return self.basic_chords[len(value) % len(self.basic_chords)]
-        return 'C'
+        
+        self.current_time = 0
+        self.tab_lines: List[Tuple[str, str]] = []
 
-    def _process_node(self, node):
-        if isinstance(node, ast.Num):
-            return [self._value_to_chord(node.n)]
-        
-        elif isinstance(node, ast.Name):
-            return [self.basic_chords[hash(node.id) % len(self.basic_chords)]]
-        
-        elif isinstance(node, ast.Assign):
-            chords = []
-            chords.extend(self.special_progressions['assignment'])
-            chords.extend(self._process_node(node.value))
-            return chords
-        
-        elif isinstance(node, ast.If):
-            chords = []
-            chords.extend(self.special_progressions['if'])
-            chords.extend(self._process_node(node.test))
-            for stmt in node.body:
-                chords.extend(self._process_node(stmt))
-            if node.orelse:
-                chords.extend(self.special_progressions['else'])
-                for stmt in node.orelse:
-                    chords.extend(self._process_node(stmt))
-            return chords
-        
-        elif isinstance(node, ast.Compare):
-            chords = []
-            chords.extend(self._process_node(node.left))
-            chords.extend(self.operator_maps['Eq'])
-            for comparator in node.comparators:
-                chords.extend(self._process_node(comparator))
-            return chords
-        
-        elif isinstance(node, ast.Return):
-            chords = []
-            chords.extend(self.special_progressions['return'])
-            if node.value:
-                chords.extend(self._process_node(node.value))
-            return chords
-        
-        elif isinstance(node, ast.BinOp):
-            chords = []
-            chords.extend(self._process_node(node.left))
-            op_type = type(node.op).__name__
-            if op_type in self.operator_maps:
-                chords.extend(self.operator_maps[op_type])
-            chords.extend(self._process_node(node.right))
-            return chords
-        
-        return ['Em']
+    def _generate_timing(self) -> str:
+        """Generate timestamp in MM:SS format"""
+        minutes = self.current_time // 60
+        seconds = self.current_time % 60
+        return f"{minutes:02d}:{seconds:02d}"
 
-    def function_to_guitar(self, func):
+    def _add_instruction(self, instruction: str, description: str):
+        """Add a new instruction to the tab with proper timing"""
+        self.tab_lines.append((self._generate_timing(), instruction.ljust(30), description))
+        self.current_time += 1
+
+    def _process_operation(self, node: ast.AST) -> List[Tuple[str, str]]:
+        """Process mathematical and logical operations"""
+        if isinstance(node, ast.BinOp):
+            op_type = type(node.op)
+            if op_type in self.operation_patterns:
+                progression = ' -> '.join(self.operation_patterns[op_type])
+                return [(f"{progression} [sustain]", f"Process {op_type.__name__} operation")]
+        return []
+
+    def _process_control_flow(self, node: ast.AST) -> List[Tuple[str, str]]:
+        """Process control flow statements (if/while/for)"""
+        instructions = []
+        
+        if isinstance(node, ast.If):
+            # Read condition
+            instructions.append((f"Palm mute {self.chord_map['READ']}", "Read condition"))
+            
+            # Process condition
+            if isinstance(node.test, ast.Compare):
+                instructions.append((
+                    f"{self.chord_map['BRANCH']} -> {self.chord_map['COMPUTE']} [sustain]",
+                    "Evaluate condition"
+                ))
+                
+        elif isinstance(node, (ast.For, ast.While)):
+            # Loop initialization
+            instructions.append((f"Palm mute {self.chord_map['LOOP']}", "Initialize loop"))
+            
+        return instructions
+
+    def _process_function_body(self, body: List[ast.AST]) -> None:
+        """Process function body nodes"""
+        for node in body:
+            # Read operation before any computation
+            self._add_instruction(f"Palm mute {self.chord_map['READ']}", "Read input")
+            
+            # Process based on node type
+            if isinstance(node, (ast.If, ast.While, ast.For)):
+                for instruction, desc in self._process_control_flow(node):
+                    self._add_instruction(instruction, desc)
+                    
+                # Process body recursively
+                if hasattr(node, 'body'):
+                    self._process_function_body(node.body)
+                if hasattr(node, 'orelse'):
+                    self._process_function_body(node.orelse)
+                    
+            elif isinstance(node, ast.Return):
+                self._add_instruction(
+                    f"{self.chord_map['WRITE']} [sustain]",
+                    "Write output and return"
+                )
+                
+            else:
+                operations = self._process_operation(node)
+                for instruction, desc in operations:
+                    self._add_instruction(instruction, desc)
+
+    def translate_function(self, func) -> str:
+        """Translate a Python function into guitar tab notation"""
+        # Reset state
+        self.current_time = 0
+        self.tab_lines = []
+        
+        # Parse function
         source = inspect.getsource(func)
         source = textwrap.dedent(source)
-        
         tree = ast.parse(source)
-        timed_chords = []
         
-        def add_chord(description, chords):
-            for chord in chords:
-                timed_chords.append((description, chord))
-        
+        # Find the function definition
         for node in ast.walk(tree):
             if isinstance(node, ast.FunctionDef):
-                for stmt in node.body:
-                    if isinstance(stmt, ast.If):
-                        # For FizzBuzz & Fizz & Buzz checks
-                        if isinstance(stmt.test, ast.BoolOp):  # FizzBuzz case
-                            add_chord("Testing if divisible by 3 and 5", ['Em', 'G'])
-                            add_chord("FizzBuzz case", ['E5', 'A5', 'D5'])
-                            add_chord("Return FizzBuzz", self.special_progressions['return'])
-                        else:  # Fizz or Buzz case
-                            if '3' in ast.dump(stmt.test):
-                                add_chord("Testing if divisible by 3", ['Em', 'G'])
-                                add_chord("Fizz case", ['E5', 'A5'])
-                                add_chord("Return Fizz", self.special_progressions['return'])
-                            else:
-                                add_chord("Testing if divisible by 5", ['Em', 'G'])
-                                add_chord("Buzz case", ['A5', 'D5'])
-                                add_chord("Return Buzz", self.special_progressions['return'])
-                    elif isinstance(stmt, ast.Return):
-                        add_chord("Default case - return number", ['E5'])
-                        add_chord("Return statement", self.special_progressions['return'])
+                self._process_function_body(node.body)
+                break
         
-        return timed_chords
+        # Generate tab
+        tab = ["// Guitar Code Translation",
+               "// Time signature: 4/4",
+               "// Tempo: 120 BPM",
+               "// Standard tuning",
+               ""]
+        
+        for timing, instruction, description in self.tab_lines:
+            tab.append(f"{timing} - {instruction} // {description}")
+            
+        return '\n'.join(tab)
 
 def fizzbuzz(n):
     if n % 3 == 0 and n % 5 == 0:
@@ -124,15 +134,5 @@ def fizzbuzz(n):
         return "Buzz"
     return n
 
-# Test it out
-translator = GuitarTranslator()
-guitar_tab = translator.function_to_guitar(fizzbuzz)
-print("// FizzBuzz implementation in power chords")
-print("// Time signature: 4/4")
-print("// Tempo: 120 BPM")
-print("// Base position: Standard tuning")
-print()
-for description, chord in guitar_tab:
-    print(f"// {description}")
-    print(f"- {chord} [sustain]")
-    print()
+translator = GuitarCodeTranslator()
+print(translator.translate_function(fizzbuzz))
