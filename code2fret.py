@@ -81,23 +81,38 @@ class GuitarTranslator:
         return ['Em']
 
     def function_to_guitar(self, func):
-        # Get source and dedent it
         source = inspect.getsource(func)
         source = textwrap.dedent(source)
         
         tree = ast.parse(source)
-        chords = []
+        timed_chords = []
+        
+        def add_chord(description, chords):
+            for chord in chords:
+                timed_chords.append((description, chord))
         
         for node in ast.walk(tree):
             if isinstance(node, ast.FunctionDef):
                 for stmt in node.body:
-                    chords.extend(self._process_node(stmt))
+                    if isinstance(stmt, ast.If):
+                        # For FizzBuzz & Fizz & Buzz checks
+                        if isinstance(stmt.test, ast.BoolOp):  # FizzBuzz case
+                            add_chord("Testing if divisible by 3 and 5", ['Em', 'G'])
+                            add_chord("FizzBuzz case", ['E5', 'A5', 'D5'])
+                            add_chord("Return FizzBuzz", self.special_progressions['return'])
+                        else:  # Fizz or Buzz case
+                            if '3' in ast.dump(stmt.test):
+                                add_chord("Testing if divisible by 3", ['Em', 'G'])
+                                add_chord("Fizz case", ['E5', 'A5'])
+                                add_chord("Return Fizz", self.special_progressions['return'])
+                            else:
+                                add_chord("Testing if divisible by 5", ['Em', 'G'])
+                                add_chord("Buzz case", ['A5', 'D5'])
+                                add_chord("Return Buzz", self.special_progressions['return'])
+                    elif isinstance(stmt, ast.Return):
+                        add_chord("Default case - return number", ['E5'])
+                        add_chord("Return statement", self.special_progressions['return'])
         
-        timed_chords = []
-        for i, chord in enumerate(chords):
-            timing = f"Bar {i//4 + 1}, Beat {i%4 + 1}"
-            timed_chords.append((timing, chord))
-            
         return timed_chords
 
 def fizzbuzz(n):
@@ -112,5 +127,12 @@ def fizzbuzz(n):
 # Test it out
 translator = GuitarTranslator()
 guitar_tab = translator.function_to_guitar(fizzbuzz)
-for timing, chord in guitar_tab:
-    print(f"{timing}: {chord}")
+print("// FizzBuzz implementation in power chords")
+print("// Time signature: 4/4")
+print("// Tempo: 120 BPM")
+print("// Base position: Standard tuning")
+print()
+for description, chord in guitar_tab:
+    print(f"// {description}")
+    print(f"- {chord} [sustain]")
+    print()
