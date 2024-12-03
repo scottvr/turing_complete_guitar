@@ -4,7 +4,7 @@ import textwrap
 from typing import List, Tuple, Dict, Any, Optional
 
 class GuitarCodeTranslator:
-    def __init__(self):
+    def __init__(self, time_signature=(4, 4), tempo=120):
         # Basic power chord progressions for common operations
         self.chord_map = {
             'READ': 'E5',
@@ -24,20 +24,21 @@ class GuitarCodeTranslator:
             ast.Compare: ['E5', 'D5', 'A5']
         }
         
-        self.current_time = 0
-        self.tab_lines: List[Tuple[str, str]] = []
+        self.time_signature = time_signature  # Tuple of (beats per measure, beat value)
+        self.tempo = tempo
         self.current_measure = 1
-	    self.current_beat = 1
-
-	def _generate_timing(self) -> str:
+        self.current_beat = 1
+        self.tab_lines = []
+	
+    def _generate_timing(self) -> str:
 	    """Generate timestamp in measure.beat format"""
 	    return f"{self.current_measure}.{self.current_beat}"
 
     def _add_instruction(self, instruction: str, description: str):
         """Add a new instruction to the tab with proper timing"""
         self.tab_lines.append((self._generate_timing(), instruction.ljust(30), description))
-    	self.current_beat += 1
-	    if self.current_beat > 4:  # In 4/4 time
+        self.current_beat += 1
+        if self.current_beat > self.time_signature[0]:
 	        self.current_beat = 1
 	        self.current_measure += 1
 
@@ -102,7 +103,8 @@ class GuitarCodeTranslator:
     def translate_function(self, func) -> str:
         """Translate a Python function into guitar tab notation"""
         # Reset state
-        self.current_time = 0
+        self.current_measure = 1
+        self.current_beat = 1
         self.tab_lines = []
         
         # Parse function
@@ -116,10 +118,10 @@ class GuitarCodeTranslator:
                 self._process_function_body(node.body)
                 break
         
-        # Generate tab
+        # Generate tab with configurable time signature
         tab = ["// Guitar Code Translation",
-               "// Time signature: 4/4",
-               "// Tempo: 120 BPM",
+               "// Time signature: {beats_per_measure}/{beat_value}",
+               "// Tempo: {self.tempo} BPM",
                "// Standard tuning",
                ""]
         
