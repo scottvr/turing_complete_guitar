@@ -119,6 +119,7 @@ class GuitarCodeTranslator:
                 break
         
         # Generate tab with configurable time signature
+        beats_per_measure, beat_value = self.time_signature
         tab = ["// Guitar Code Translation",
                f"// Time signature: {beats_per_measure}/{beat_value}",
                f"// Tempo: {self.tempo} BPM",
