@@ -26,17 +26,20 @@ class GuitarCodeTranslator:
         
         self.current_time = 0
         self.tab_lines: List[Tuple[str, str]] = []
+        self.current_measure = 1
+	    self.current_beat = 1
 
-    def _generate_timing(self) -> str:
-        """Generate timestamp in MM:SS format"""
-        minutes = self.current_time // 60
-        seconds = self.current_time % 60
-        return f"{minutes:02d}:{seconds:02d}"
+	def _generate_timing(self) -> str:
+	    """Generate timestamp in measure.beat format"""
+	    return f"{self.current_measure}.{self.current_beat}"
 
     def _add_instruction(self, instruction: str, description: str):
         """Add a new instruction to the tab with proper timing"""
         self.tab_lines.append((self._generate_timing(), instruction.ljust(30), description))
-        self.current_time += 1
+    	self.current_beat += 1
+	    if self.current_beat > 4:  # In 4/4 time
+	        self.current_beat = 1
+	        self.current_measure += 1
 
     def _process_operation(self, node: ast.AST) -> List[Tuple[str, str]]:
         """Process mathematical and logical operations"""
