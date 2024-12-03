@@ -120,8 +120,8 @@ class GuitarCodeTranslator:
         
         # Generate tab with configurable time signature
         tab = ["// Guitar Code Translation",
-               "// Time signature: {beats_per_measure}/{beat_value}",
-               "// Tempo: {self.tempo} BPM",
+               f"// Time signature: {beats_per_measure}/{beat_value}",
+               f"// Tempo: {self.tempo} BPM",
                "// Standard tuning",
                ""]
         
