@@ -50,3 +50,6 @@ Then I went nuts with it, documenting *that* journey in [a repo of its own calle
             - and by extension, python code if you wish
   - a few different takes and incomplete versions of some of the aforementioned stuff
 
+## nothing to see here
+
+[to see the results of being nerdsniped by the merging of gtr and a ludicrous tech idea: *gtr sniped*](https://github.com/scottvr/gtrsnipe) 
