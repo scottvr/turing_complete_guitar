@@ -47,6 +47,6 @@ Then I went nuts with it, documenting *that* journey in [a repo of its own calle
         - take a song as midi data or guitar tab
             - convert it to whichever it is not
             - including GuitarCPU program instruction listing
-            - and by extention, python code if you wish
+            - and by extension, python code if you wish
   - a few different takes and incomplete versions of some of the aforementioned stuff
 
